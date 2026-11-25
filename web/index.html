@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BeiAlert API — test console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+  :root{
+    --paper:#F7F5F0; --card:#FFFFFF; --ink:#1C1917; --muted:#57534E;
+    --line:#E3DED4; --accent:#C2410C; --accent-soft:#FFF7ED; --good:#15803D;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.5}
+  header{padding:28px 20px 18px;border-bottom:1px solid var(--line);background:var(--card)}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-family:'Fraunces',Georgia,serif;font-size:28px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px}
+  .status{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:5px 11px;
+          border:1px solid var(--line);border-radius:999px;font-size:13px;background:var(--paper)}
+  .dot{width:8px;height:8px;border-radius:50%;background:#A8A29E}
+  .dot.ok{background:var(--good)} .dot.bad{background:var(--accent)}
+  main{padding:22px 20px 60px}
+  .controls{display:grid;grid-template-columns:1fr 150px auto;gap:12px;align-items:end;
+            padding:18px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  select,button{font-family:inherit;font-size:15px;min-height:46px;border-radius:10px}
+  select{width:100%;padding:0 10px;border:1px solid #D6D3D1;background:#fff;color:var(--ink)}
+  button{padding:0 20px;border:0;background:var(--ink);color:#fff;font-weight:600;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  .result{margin-top:22px;display:none}
+  .headline{display:flex;flex-wrap:wrap;gap:18px;align-items:baseline;
+            padding:18px;border-radius:14px;background:var(--accent-soft);
+            border:1.5px solid var(--accent)}
+  .big{font-family:'Fraunces',Georgia,serif;font-size:32px;font-weight:700}
+  .delta{font-size:17px;font-weight:600;color:var(--accent)}
+  /* Non-shippable series: neutral grey, so a rejected model doesn't read as an alert. */
+  .horizon{display:none;flex-wrap:wrap;gap:8px 18px;align-items:baseline;margin-top:12px;
+           padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  #stalePrompt{color:var(--accent);font-size:14px;font-weight:600;align-self:center}
+  .horizon strong{font-size:16px}
+  .horizon .val{font-size:18px;font-weight:700}
+  .horizon .rng{color:var(--muted);font-size:15px}
+  .horizon .note{color:var(--muted);font-size:13px;flex-basis:100%;margin-top:2px}
+  .headline.rejected{background:#F5F5F4;border-color:#D6D3D1}
+  .headline.rejected .delta{color:var(--muted)}
+  .rejected-note{margin:0 0 10px;font-size:13px;color:var(--muted)}
+  .meta{font-size:13px;color:var(--muted)}
+  .panel{margin-top:14px;padding:18px;background:var(--card);
+         border:1px solid var(--line);border-radius:14px}
+  .panel h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;
+            color:var(--muted);margin:0 0 12px;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #F1EDE5}
+  th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600}
+  .badge.ok{background:#DCFCE7;color:#14532D} .badge.warn{background:#FFEDD5;color:#7C2D12}
+  .badge.muted{background:#E7E5E4;color:#44403C;margin-left:6px}
+  pre{margin:0;padding:14px;background:#1C1917;color:#E7E5E4;border-radius:10px;
+      font-family:'IBM Plex Mono',monospace;font-size:12.5px;overflow:auto;max-height:340px}
+  .err{padding:14px;border-radius:10px;background:#FEF2F2;color:#7F1D1D;
+       border:1px solid #FECACA;font-size:14px}
+  .stale{margin-bottom:14px;padding:13px 15px;border-radius:12px;
+         background:#FEF3C7;border:1px solid #FCD34D;color:#78350F;font-size:14px}
+  .summary{margin:0 0 16px;font-size:15px}
+  .lead{margin:0 0 12px;font-family:'Fraunces',Georgia,serif;
+        font-size:18px;line-height:1.45}
+  .points{margin:0;padding-left:20px;font-size:14.5px;color:#292524}
+  .points li{margin-bottom:7px}
+  .conf{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;
+        font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;vertical-align:middle}
+  .conf.moderate{background:#DCFCE7;color:#14532D}
+  .conf.low{background:#FEF3C7;color:#78350F}
+  .conf.none{background:#E7E5E4;color:#44403C}
+  .caveat{margin:14px 0 0;font-size:12.5px;color:var(--muted);
+          padding-top:12px;border-top:1px solid #F1EDE5}
+  .driver{display:grid;grid-template-columns:1fr 60px;gap:4px 12px;
+          align-items:baseline;margin-bottom:11px}
+  .driver .name{font-size:14px}
+  .driver .pct{text-align:right;font-size:13px;font-weight:600;
+               font-variant-numeric:tabular-nums}
+  .track{grid-column:1/3;display:block;height:9px;border-radius:999px;
+         background:#EDE8DE;overflow:hidden}
+  .fill{display:block;height:9px;border-radius:999px;background:var(--accent)}
+  .fill.down{background:#78716C}
+  @media (max-width:640px){.controls{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>BeiAlert API</h1>
+  <div class="sub">Test console for the forecasting service. Not the product UI.</div>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">checking…</span></div>
+</div></header>
+
+<main><div class="wrap">
+  <div class="controls">
+    <div>
+      <label for="series">Series</label>
+      <select id="series"><option>loading…</option></select>
+    </div>
+    <div>
+      <label for="horizon">Months ahead</label>
+      <select id="horizon">
+        <option value="1" selected>1</option><option value="2">2</option>
+        <option value="3">3</option><option value="6">6</option>
+      </select>
+    </div>
+    <button id="go" disabled>Forecast</button>
+    <span id="stalePrompt" style="display:none">press Forecast to update</span>
+  </div>
+
+  <div id="error" class="err" style="display:none"></div>
+
+  <section class="result" id="result">
+    <div class="stale" id="stale" style="display:none"></div>
+    <div class="headline">
+      <div>
+        <div class="meta" id="label"></div>
+        <div class="big" id="price"></div>
+      </div>
+      <div><div class="delta" id="delta"></div><div class="meta" id="month"></div></div>
+      <div style="margin-left:auto"><span class="badge" id="quality"></span><span class="badge muted" id="notShippable" style="display:none">not shippable</span></div>
+    </div>
+
+    <div class="horizon" id="horizonStrip" style="display:none"></div>
+
+    <div class="panel">
+      <h2>History and forecast</h2>
+      <svg id="chart" viewBox="0 0 820 240" width="100%" height="240" role="img"
+           aria-label="Observed monthly prices followed by the forecast band"></svg>
+    </div>
+
+    <div class="panel" id="summaryPanel">
+      <h2>In plain English</h2>
+      <p class="lead" id="sumHead"></p>
+      <ul class="points" id="sumPoints"></ul>
+    </div>
+
+    <div class="panel">
+      <h2>Why this forecast</h2>
+      <p class="summary" id="whySummary"></p>
+      <div id="drivers"></div>
+      <p class="caveat" id="whyCaveat"></p>
+    </div>
+
+    <div class="panel">
+      <h2>Forecast points</h2>
+      <p class="rejected-note" id="rejectedNote" style="display:none">Model output below was rejected — it did not beat both baselines on held-out months. Shown for inspection only.</p>
+      <table><thead><tr>
+        <th>Month</th><th class="num">Predicted</th>
+        <th class="num">80% range</th><th class="num">Change</th>
+      </tr></thead><tbody id="rows"></tbody></table>
+    </div>
+
+    <div class="panel">
+      <h2>Raw response</h2>
+      <pre id="raw"></pre>
+    </div>
+  </section>
+</div></main>
+
+<script>
+const API = location.origin;           // same host as this page
+const $ = id => document.getElementById(id);
+
+async function get(path){
+  const res = await fetch(API + path);
+  if(!res.ok) throw new Error(`${res.status} ${res.statusText} on ${path}`);
+  return res.json();
+}
+function fail(msg){ $('error').textContent = msg; $('error').style.display = 'block'; }
+
+async function boot(){
+  try{
+    const h = await get('/health');
+    const ok = h.models_loaded;
+    $('dot').className = 'dot ' + (ok ? 'ok' : 'bad');
+    $('statusText').textContent = ok
+      ? `${h.series_count} series · trained ${h.trained_at.slice(0,10)}`
+      : (h.detail || 'no models loaded');
+    if(!ok) return;
+
+    const {series} = await get('/series');
+    // Shippable series first; the API's commodity/market order is kept within
+    // each group (sort is stable). A missing flag counts as shippable.
+    const ship = s => s.shippable !== false;
+    series.sort((a, b) => ship(b) - ship(a));
+    $('series').innerHTML = series.map(s =>
+      `<option value="${s.series_key}">${s.commodity} · ${s.market} · ${s.unit} (${s.pricetype})</option>`
+    ).join('');
+    $('go').disabled = false;
+  }catch(e){
+    $('dot').className = 'dot bad';
+    $('statusText').textContent = 'API unreachable';
+    fail(e.message);
+  }
+}
+
+function drawChart(hist, points, rejected){
+  // Grey forecast for a rejected model so it doesn't read as a recommendation.
+  const fcColor = rejected ? '#A8A29E' : '#C2410C';
+  const svg = $('chart');
+  const obs = hist.points.map(p => ({m:p.month, v:p.price, kind:'obs'}));
+  const fc  = points.map(p => ({m:p.month, v:p.predicted_price,
+                                lo:p.lower_80, hi:p.upper_80, kind:'fc'}));
+  const all = obs.concat(fc);
+  if(all.length < 2){ svg.innerHTML = ''; return; }
+
+  const W=820,H=240,L=54,R=14,T=16,B=30;
+  const lo = Math.min(...all.map(d => d.lo ?? d.v));
+  const hi = Math.max(...all.map(d => d.hi ?? d.v));
+  const pad = (hi-lo)*0.12 || 1;
+  const yMin = lo-pad, yMax = hi+pad;
+  const X = i => L + i*(W-L-R)/(all.length-1);
+  const Y = v => T + (yMax-v)/(yMax-yMin)*(H-T-B);
+
+  const line = pts => pts.map((p,i)=>`${i?'L':'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join('');
+  const obsPts = obs.map((d,i)=>({x:X(i),y:Y(d.v)}));
+  const joinAt = obs.length-1;
+  const fcPts  = [{x:X(joinAt),y:Y(obs[joinAt].v)}]
+                 .concat(fc.map((d,i)=>({x:X(joinAt+1+i),y:Y(d.v)})));
+  const band = [{x:X(joinAt),y:Y(obs[joinAt].v)}]
+                 .concat(fc.map((d,i)=>({x:X(joinAt+1+i),y:Y(d.hi)})))
+                 .concat(fc.map((d,i)=>({x:X(joinAt+fc.length-i),y:Y(fc[fc.length-1-i].lo)})))
+                 .concat([{x:X(joinAt),y:Y(obs[joinAt].v)}]);
+
+  const ticks = [yMin,(yMin+yMax)/2,yMax].map(v =>
+    `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#F1EDE5"/>
+     <text x="${L-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="#78716C">${v.toFixed(0)}</text>`
+  ).join('');
+
+  svg.innerHTML = `
+    ${ticks}
+    <path d="${line(band)}Z" fill="${fcColor}" fill-opacity="0.13"/>
+    <path d="${line(obsPts)}" fill="none" stroke="#44403C" stroke-width="2"/>
+    <path d="${line(fcPts)}" fill="none" stroke="${fcColor}" stroke-width="2.5" stroke-dasharray="6 5"/>
+    <line x1="${X(joinAt)}" x2="${X(joinAt)}" y1="${T}" y2="${H-B}"
+          stroke="#D6D3D1" stroke-dasharray="3 3"/>
+    <text x="${L}" y="${H-8}" font-size="11" fill="#78716C">${all[0].m}</text>
+    ${X(joinAt) < W-R-70
+      ? `<text x="${X(joinAt)}" y="${H-8}" text-anchor="middle" font-size="11" fill="#78716C">now</text>`
+      : ''}
+    <text x="${W-R}" y="${H-8}" text-anchor="end" font-size="11" fill="#78716C">${all[all.length-1].m}</text>`;
+}
+
+async function run(){
+  $('error').style.display='none';
+  $('go').disabled = true; $('go').textContent = 'Loading…';
+  $('stalePrompt').style.display = 'none';
+  const key = $('series').value, h = $('horizon').value;
+  try{
+    const [f, hist] = await Promise.all([
+      get(`/forecast?series_key=${encodeURIComponent(key)}&horizon=${h}`),
+      get(`/history?series_key=${encodeURIComponent(key)}&months=24`)
+    ]);
+    if(!f.forecast || !f.forecast.length){
+      $('result').style.display = 'none';
+      fail((f.summary && f.summary.headline)
+           || 'This series has too little recent history to forecast. Pick another.');
+      return;
+    }
+    const first = f.forecast[0];
+    const shown = f.forecast[f.forecast.length - 1];
+    const rejected = f.shippable === false;
+
+    const where = String(f.market).toUpperCase() === 'NATIONAL' ? 'national average' : f.market;
+    $('label').textContent = `${f.commodity} · ${where} · per ${f.unit}`;
+    $('result').querySelector('.headline').classList.toggle('rejected', rejected);
+    $('rejectedNote').style.display = rejected ? 'block' : 'none';
+    if(rejected){
+      $('price').textContent = `${f.currency} ${f.last_observed_price.toLocaleString()}`;
+      $('delta').textContent = 'no reliable forecast';
+      $('month').textContent = `last observed, ${f.last_observed_month}`;
+    } else {
+      // The headline follows the selected horizon, so the card visibly
+      // answers the question the dropdown asked.
+      $('price').textContent = `${f.currency} ${shown.predicted_price.toLocaleString()}`;
+      $('delta').textContent = `${shown.change_pct > 0 ? '+' : ''}${shown.change_pct}%`;
+      $('month').textContent = (f.forecast.length > 1
+        ? `by ${shown.month} · month ${shown.horizon} of ${f.forecast.length}`
+        : `by ${shown.month}`)
+        + ` · last seen ${f.currency} ${f.last_observed_price.toLocaleString()} in ${f.last_observed_month}`;
+    }
+
+    const q = f.model_quality;
+    $('quality').className = 'badge ' + (q.beats_naive_baseline ? 'ok' : 'warn');
+    $('quality').textContent = q.beats_naive_baseline
+      ? `${f.model} · MASE ${q.mase} · beats naive`
+      : `${f.model} · MASE ${q.mase} · worse than naive`;
+    $('notShippable').style.display = rejected ? 'inline-block' : 'none';
+
+    $('rows').innerHTML = f.forecast.map(p => `<tr>
+        <td>${p.month}</td>
+        <td class="num">${p.predicted_price.toLocaleString()}</td>
+        <td class="num">${p.lower_80.toLocaleString()} – ${p.upper_80.toLocaleString()}</td>
+        <td class="num">${p.change_pct > 0 ? '+' : ''}${p.change_pct}%</td></tr>`).join('');
+
+    const sm = f.summary;
+    if(sm){
+      $('sumHead').innerHTML = sm.headline +
+        `<span class="conf ${sm.confidence}">${sm.confidence} confidence</span>`;
+      $('sumPoints').innerHTML = sm.sentences.map(s => `<li>${s}</li>`).join('');
+      $('summaryPanel').style.display = 'block';
+    } else { $('summaryPanel').style.display = 'none'; }
+
+    const dq = f.data_quality;
+    if(dq && dq.is_stale){
+      $('stale').textContent =
+        `Stale series — ${dq.note} (${dq.months_since_last_observation} months ago)`;
+      $('stale').style.display = 'block';
+    } else { $('stale').style.display = 'none'; }
+
+    const ex = f.explanation;
+    if(ex){
+      $('whySummary').textContent = ex.summary;
+      $('whyCaveat').textContent =
+        (ex.is_per_forecast ? '' : 'This model reports overall importance, not this forecast specifically. ')
+        + ex.caveat;
+      $('drivers').innerHTML = ex.contributions.slice(0,6).map(c => `
+        <div class="driver">
+          <span class="name">${c.label} <span style="color:var(--muted)">${c.direction === 'up' ? '↑' : '↓'}</span></span>
+          <span class="pct">${c.share_pct}%</span>
+          <span class="track"><span class="fill ${c.direction}" style="width:${c.share_pct}%"></span></span>
+        </div>`).join('');
+    }
+
+    // The headline shows the far end of the horizon; this strip keeps next
+    // month visible, because the summary and drivers below describe that month.
+    if(!rejected && f.forecast.length > 1){
+      $('horizonStrip').innerHTML =
+        `<strong>Next month · ${first.month}</strong>`
+      + `<span class="val">${f.currency} ${first.predicted_price.toLocaleString()}</span>`
+      + `<span class="rng">80% range ${first.lower_80.toLocaleString()} – ${first.upper_80.toLocaleString()}</span>`
+      + `<span class="rng">${first.change_pct > 0 ? '+' : ''}${first.change_pct}% vs last observed</span>`
+      + `<span class="note">The summary and drivers below describe this month. `
+      + `The headline above shows month ${shown.horizon}, where the band is wider `
+      + `because each step forecasts off the previous one.</span>`;
+      $('horizonStrip').style.display = 'flex';
+    } else {
+      $('horizonStrip').style.display = 'none';
+    }
+
+    drawChart(hist, f.forecast, rejected);
+    $('raw').textContent = JSON.stringify(f, null, 2);
+    $('result').style.display = 'block';
+  }catch(e){ fail(e.message); }
+  finally{ $('go').disabled = false; $('go').textContent = 'Forecast'; }
+}
+
+$('go').addEventListener('click', run);
+['series','horizon'].forEach(id => $(id).addEventListener('change', () => {
+  if($('result').style.display === 'block') $('stalePrompt').style.display = 'inline';
+}));
+boot();
+</script>
+</body>
+</html>

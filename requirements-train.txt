@@ -1,0 +1,6 @@
+# Extras for offline work (src.train_pooled, src.evaluate). Not needed to deploy:
+# the shipped model is Ridge or random forest, and xgboost pulls in a large
+# NVIDIA dependency on Linux.
+-r requirements.txt
+xgboost==2.1.1
+matplotlib==3.10.9
